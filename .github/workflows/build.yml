@@ -1,0 +1,75 @@
+name: Native firmware
+
+on:
+  push:
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  targets:
+    runs-on: ubuntu-24.04
+    outputs:
+      targets: ${{ steps.targets.outputs.targets }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: astral-sh/setup-uv@v6
+        with:
+          version: '0.8.17'
+          python-version: '3.11.13'
+      - id: targets
+        shell: bash
+        run: |
+          target_matrix=$(uv run fw targets)
+          echo "targets=$target_matrix" >> "$GITHUB_OUTPUT"
+  build:
+    needs: targets
+    name: ${{ matrix.target }} / ${{ matrix.os }}
+    runs-on: ${{ matrix.os }}
+    timeout-minutes: 90
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-24.04, windows-2022, macos-15, macos-15-intel]
+        target: ${{ fromJSON(needs.targets.outputs.targets) }}
+    defaults:
+      run:
+        shell: pwsh
+    steps:
+      - uses: actions/checkout@v4
+      - uses: astral-sh/setup-uv@v6
+        with:
+          version: '0.8.17'
+          python-version: '3.11.13'
+      - name: Linux native prerequisites
+        if: runner.os == 'Linux'
+        run: sudo apt-get update && sudo apt-get install -y git cmake ninja-build flex bison gperf libffi-dev libssl-dev libusb-1.0-0
+      - name: Test development tools
+        run: uv run fw test
+      - name: Install native SDK
+        run: uv run fw bootstrap --target ${{ matrix.target }}
+      - name: Build firmware
+        run: uv run fw build --target ${{ matrix.target }} --build-dir build/${{ matrix.target }}
+      - name: Upload flashable firmware
+        if: matrix.os == 'ubuntu-24.04'
+        uses: actions/upload-artifact@v4
+        with:
+          name: ${{ matrix.target }}
+          if-no-files-found: error
+          path: |
+            build/${{ matrix.target }}/${{ matrix.target }}.bin
+            build/${{ matrix.target }}/${{ matrix.target }}.elf
+            build/${{ matrix.target }}/flasher_args.json
+            build/${{ matrix.target }}/bootloader/bootloader.bin
+            build/${{ matrix.target }}/partition_table/partition-table.bin
+            build/${{ matrix.target }}/sdkconfig
+      - name: Upload build diagnostics
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: diagnostics-${{ matrix.target }}-${{ matrix.os }}
+          if-no-files-found: ignore
+          path: |
+            build/${{ matrix.target }}/log/

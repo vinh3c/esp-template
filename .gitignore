@@ -1,0 +1,11 @@
+/build/
+/sdkconfig
+/sdkconfig.old
+/managed_components/
+/.tools/
+/.cache/
+__pycache__/
+/.venv/
+/*.egg-info/
+/config.local.json
+/.local/
