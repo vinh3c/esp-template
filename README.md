@@ -1,15 +1,15 @@
 # ESP template
 
-Template ESP-IDF thuần để bắt đầu project mới, tham khảo workflow của
-`deye-inverter-esp`. Không có Matter/HomeKit, Modbus hoặc cấu hình inverter.
-Firmware chỉ log `Hello world` mỗi giây.
+A general-purpose ESP-IDF starter based on the development workflow from
+`deye-inverter-esp`. The application logs `Hello world` once per second.
+It has no Matter/HomeKit, Modbus, or inverter configuration.
 
-Mặc định: **ESP32-C3**, flash 4 MB, console USB Serial/JTAG, ESP-IDF **v5.4.1**,
-Python **3.11.13**. Bộ lệnh dùng chung cho Windows, macOS và Linux.
+Defaults: **ESP32-C3**, 4 MB flash, USB Serial/JTAG console, ESP-IDF **v5.4.1**,
+and Python **3.11.13**. The CLI supports native Windows, macOS, and Linux workflows.
 
-## Bắt đầu
+## Getting started
 
-Cài Git và uv, sau đó chạy tại thư mục project:
+Install Git and uv, then run from the project root:
 
 ```sh
 uv run fw bootstrap
@@ -18,61 +18,65 @@ uv run fw ports
 uv run fw dev --port COM3
 ```
 
-Thay `COM3` bằng cổng thực tế; macOS/Linux dùng `/dev/cu.usbmodem*` hoặc
-`/dev/ttyACM0`. `dev` build, flash rồi mở monitor. Thoát monitor bằng **Ctrl + ]**.
+Replace `COM3` with the actual port. On macOS/Linux, use `/dev/cu.usbmodem*` or
+`/dev/ttyACM0`. `dev` builds, flashes, and opens the monitor. Exit with **Ctrl + ]**.
 
-Trên Linux cần có compiler hệ thống, CMake, Ninja, flex, bison, gperf,
-libffi, OpenSSL và libusb development packages. Bootstrap tải SDK và toolchain;
-không cần cài ESP-Matter, GN, WSL hoặc Docker. Đặt đường dẫn project và SDK
-không có khoảng trắng để tương thích workflow đã chọn.
+Linux requires a system compiler, CMake, Ninja, flex, bison, gperf, and development
+packages for libffi, OpenSSL, and libusb. Bootstrap downloads the SDK and toolchain.
+ESP-Matter, GN, WSL, and Docker are not required. Keep project and SDK paths free
+of whitespace for compatibility with the selected workflow.
 
-## Các lệnh
+## Commands
 
-| Lệnh | Chức năng |
+| Command | Purpose |
 | --- | --- |
-| `uv run fw bootstrap` | Cài SDK và toolchain |
+| `uv run fw bootstrap` | Install the SDK and toolchain |
 | `uv run fw build` | Build firmware |
-| `uv run fw test` | Kiểm tra công cụ flash, không truy cập phần cứng |
-| `uv run fw menuconfig` | Chỉnh cấu hình ESP-IDF |
-| `uv run fw ports` | Liệt kê cổng serial |
-| `uv run fw flash --port COM3` | Flash bản đã build |
-| `uv run fw deploy --port COM3` | Build rồi flash |
-| `uv run fw dev --port COM3` | Build, flash và monitor |
-| `uv run fw monitor --port COM3` | Xem log ở 115200 baud |
-| `uv run fw clean` | Dọn kết quả biên dịch |
+| `uv run fw test` | Test flash tooling without accessing hardware |
+| `uv run fw menuconfig` | Configure ESP-IDF |
+| `uv run fw ports` | List serial ports |
+| `uv run fw flash --port COM3` | Flash an existing build |
+| `uv run fw deploy --port COM3` | Build and flash |
+| `uv run fw dev --port COM3` | Build, flash, and monitor |
+| `uv run fw monitor --port COM3` | Monitor serial output at 115200 baud |
+| `uv run fw clean` | Clean compilation output |
 
-`erase-flash --port COM3` xóa toàn bộ flash; chỉ dùng khi chủ động muốn xóa dữ liệu.
+`uv run fw erase-flash --port COM3` erases all flash contents. Use it only when
+you intend to delete stored data.
 
-SDK mặc định ở `.tools/sdk`. Có thể dùng SDK cùng phiên bản đã cài bằng biến
-`ESP_SDK_ROOT`, trỏ đến thư mục chứa `esp-idf/` và `tools/`.
+The SDK defaults to `.tools/sdk`. To reuse an existing SDK of the same version,
+set `ESP_SDK_ROOT` to the directory containing `esp-idf/` and `tools/`.
 
-Build mặc định ở `build/esp32-c3/native-<platform>-<architecture>/`.
-Dùng `--build-dir <path>` để đổi; truyền cùng đường dẫn khi build/flash/monitor.
-Firmware có tên `esp32-c3.bin`. Flash đọc offsets và các binary từ
-`flasher_args.json`, bao gồm bootloader và partition table.
+Build output defaults to `build/esp32-c3/native-<platform>-<architecture>/`.
+Override it with `--build-dir <path>` and use the same path for build, flash, and
+monitor commands. The firmware is named `esp32-c3.bin`. Flashing reads offsets
+and binary paths from `flasher_args.json`, including the bootloader and partition
+table.
 
-## Tạo project mới
+## Starting a new project
 
-1. Copy các file nguồn của template sang thư mục mới; bỏ `.venv/`, `.tools/`,
-   `.cache/`, `build/`, `*.egg-info/` và `.git/` nếu có.
-2. Đổi `name` trong `pyproject.toml` theo project; giữ entry point `fw`.
-3. Viết ứng dụng trong `main/app_main.cpp`, thêm source/dependency tại
-   `main/CMakeLists.txt` và cấu hình mặc định tại `sdkconfig.defaults`.
-4. Chạy bootstrap, build và flash như trên. Có thể chia sẻ SDK bằng `ESP_SDK_ROOT`.
+1. Copy the template source into a new directory. Exclude `.venv/`, `.tools/`,
+   `.cache/`, `build/`, `*.egg-info/`, and `.git/` if present.
+2. Update `name` in `pyproject.toml` for the project, keeping the `fw` entry point.
+3. Implement the application in `main/app_main.cpp`, add sources and dependencies
+   to `main/CMakeLists.txt`, and set defaults in `sdkconfig.defaults`.
+4. Bootstrap, build, and flash as above. Use `ESP_SDK_ROOT` to share an SDK.
 
-`targets.json` là nguồn target dùng chung cho CLI và CI; hiện chỉ cấu hình ESP32-C3.
-Khi chuyển board/chip cần cập nhật target, flash size, console và kiểm tra thực tế.
-Template dùng partition table mặc định của ESP-IDF, chưa cấu hình OTA.
+`targets.json` is shared by the CLI and CI. Only ESP32-C3 is currently configured.
+When changing boards or chips, review the target, flash size, and console settings
+and verify them on hardware. This template uses the default ESP-IDF partition
+table and does not configure OTA.
 
 ## CI
 
-GitHub Actions chạy test và build native trên Windows, Ubuntu, Intel macOS và
-Apple Silicon. Job Ubuntu đóng gói artifact `esp32-c3` gồm app, ELF, bootloader,
-partition table, sdkconfig và flash manifest; giữ cấu trúc khi tải về để flash:
+GitHub Actions runs tooling tests and native builds on Windows, Ubuntu, Intel
+macOS, and Apple Silicon. The Ubuntu job uploads the `esp32-c3` artifact containing
+the application, ELF, bootloader, partition table, sdkconfig, and flash manifest.
+Preserve the directory structure when extracting it:
 
 ```sh
 uv run fw flash --port COM3 --build-dir path/to/extracted/artifact
 ```
 
-Không tự tạo GitHub Release. CI và runtime trên board cần được kiểm tra riêng
-với kết quả build local.
+The workflow does not create GitHub Releases. CI and on-board runtime results
+must be verified separately from local builds.
